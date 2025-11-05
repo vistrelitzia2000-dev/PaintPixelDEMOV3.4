@@ -1,0 +1,374 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paint Pixel DEMO — V3.4</title>
+  <style>
+    :root {
+      --pixel-size: 20px;
+      --gap: 1px;
+      --cols: 10;
+      --bg-color: #111827;
+      --text-color: #f3f4f6;
+      --panel-bg: #1f2937;
+      --accent: #ffffff;
+      --pixel-border: rgba(255,255,255,0.1);
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px;
+      gap: 16px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    h1 { 
+      margin: 0; 
+      font-size: 1.4rem; 
+      text-align: center; 
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      background: var(--panel-bg);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(255,255,255,0.1);
+      padding: 10px 14px;
+      width: 90%;
+      max-width: 900px;
+      gap: 10px;
+    }
+
+    .section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    select, button, input[type=color], input[type=file] {
+      font-size: 1rem;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--accent);
+      background: var(--panel-bg);
+      color: var(--text-color);
+      transition: all 0.2s;
+    }
+
+    button {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 38px;
+      min-height: 38px;
+      border: 1px solid var(--accent);
+      background: var(--panel-bg);
+      color: var(--text-color);
+    }
+
+    button:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    input[type=color] {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #eyedropper {
+      background: #ffffff;
+      color: #000000;
+      border: 1px solid #cbd5e1;
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), var(--pixel-size));
+      gap: var(--gap);
+      background: #9ca3af;
+      padding: 4px;
+      border-radius: 8px;
+      user-select: none;
+      position: relative;
+      overflow: auto;
+      max-width: 95vw;
+      max-height: 80vh;
+      border: 1px solid var(--accent);
+    }
+
+    .pixel {
+      width: var(--pixel-size);
+      height: var(--pixel-size);
+      background: #ffffff;
+      border: 1px solid var(--pixel-border);
+      cursor: crosshair;
+    }
+
+    #coord {
+      background: var(--panel-bg);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.95rem;
+      min-width: 180px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(255,255,255,0.05);
+      color: var(--accent);
+    }
+
+    footer {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 12px;
+      color: var(--accent);
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    input[type=file] {
+      background: transparent;
+      border: none;
+      color: var(--accent);
+    }
+
+    input[type=file]::file-selector-button {
+      background: var(--panel-bg);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    input[type=file]::file-selector-button:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+  </style>
+</head>
+<body>
+  <h1>🎨 Paint Pixel DEMO — V3.4</h1>
+
+  <div class="controls">
+    <!-- Sección Izquierda: Herramientas de pintura -->
+    <div class="section">
+      <button id="eyedropper" title="Cuentagotas">🩸</button>
+      <input id="colorPicker" type="color" value="#ff4500">
+      <select id="sizeSelect" title="Tamaño del lienzo"></select>
+      <button id="eraser" title="Borrador">🧽</button>
+      <button id="clear" title="Limpiar lienzo">🧹</button>
+    </div>
+
+    <!-- Sección Derecha: Carga y descarga -->
+    <div class="section">
+      <label title="Subir imagen">
+        ⬆️
+        <input type="file" id="uploadImage" accept="image/*">
+      </label>
+      <button id="download" title="Descargar imagen">⬇️</button>
+    </div>
+  </div>
+
+  <div id="coord">Coordenadas: (-- , --)</div>
+  <div id="grid"></div>
+
+  <footer></footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const sizeSelect = document.getElementById('sizeSelect');
+  const grid = document.getElementById('grid');
+  const colorPicker = document.getElementById('colorPicker');
+  const eraserBtn = document.getElementById('eraser');
+  const eyedropperBtn = document.getElementById('eyedropper');
+  const clearBtn = document.getElementById('clear');
+  const downloadBtn = document.getElementById('download');
+  const coordDisplay = document.getElementById('coord');
+  const uploadInput = document.getElementById('uploadImage');
+
+  let eraser = false;
+  let eyedropper = false;
+  let isMouseDown = false;
+  let gridSize = 10;
+
+  // === Crear opciones de tamaño ===
+  for(let n=5; n<=10000; n+=5){
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = `${n}×${n} (${n*n} píxeles)`;
+    if(n===10) opt.selected = true;
+    sizeSelect.appendChild(opt);
+  }
+
+  // === Crear cuadrícula ===
+  function createGrid(size){
+    grid.innerHTML = '';
+    document.documentElement.style.setProperty('--cols', size);
+    for(let y=0;y<size;y++){
+      for(let x=0;x<size;x++){
+        const p = document.createElement('div');
+        p.className = 'pixel';
+        p.dataset.x = x+1;
+        p.dataset.y = y+1;
+        grid.appendChild(p);
+      }
+    }
+  }
+
+  createGrid(gridSize);
+
+  // === Función de pintado ===
+  function paintPixel(el){
+    if(!el.classList.contains('pixel')) return;
+    el.style.background = eraser ? '#ffffff' : colorPicker.value;
+  }
+
+  function getPixelCoords(el){
+    if(!el.classList.contains('pixel')) return '(--, --)';
+    return `(${el.dataset.x}, ${el.dataset.y})`;
+  }
+
+  // === Eventos ===
+  grid.addEventListener('mousedown', e=>{
+    if(eyedropper && e.target.classList.contains('pixel')){
+      const color = getComputedStyle(e.target).backgroundColor;
+      const hex = rgbToHex(color);
+      colorPicker.value = hex;
+      eyedropper = false;
+      eyedropperBtn.style.background = '#ffffff';
+      eyedropperBtn.style.color = '#000000';
+      return;
+    }
+    isMouseDown = true;
+    paintPixel(e.target);
+  });
+
+  document.addEventListener('mouseup', ()=>isMouseDown=false);
+
+  grid.addEventListener('mouseover', e=>{
+    if(isMouseDown) paintPixel(e.target);
+  });
+
+  grid.addEventListener('mousemove', e=>{
+    coordDisplay.textContent = 'Coordenadas: ' + getPixelCoords(e.target);
+  });
+
+  eraserBtn.addEventListener('click', ()=>{
+    eraser = !eraser;
+    if(eraser) {
+      eyedropper = false;
+      eyedropperBtn.style.background = '#ffffff';
+      eyedropperBtn.style.color = '#000000';
+    }
+    eraserBtn.style.background = eraser ? '#9ca3af' : 'var(--panel-bg)';
+  });
+
+  eyedropperBtn.addEventListener('click', ()=>{
+    eyedropper = !eyedropper;
+    if(eyedropper){
+      eraser = false;
+      eraserBtn.style.background = 'var(--panel-bg)';
+      eyedropperBtn.style.background = '#000000';
+      eyedropperBtn.style.color = '#ffffff';
+    } else {
+      eyedropperBtn.style.background = '#ffffff';
+      eyedropperBtn.style.color = '#000000';
+    }
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(confirm("¿Estás seguro de limpiar el lienzo?")){
+      grid.querySelectorAll('.pixel').forEach(p=>p.style.background='#ffffff');
+    }
+  });
+
+  sizeSelect.addEventListener('change', ()=>{
+    gridSize = parseInt(sizeSelect.value);
+    createGrid(gridSize);
+  });
+
+  function rgbToHex(rgb) {
+    const result = rgb.match(/\d+/g);
+    if (!result) return '#000000';
+    const r = parseInt(result[0]).toString(16).padStart(2, '0');
+    const g = parseInt(result[1]).toString(16).padStart(2, '0');
+    const b = parseInt(result[2]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+  }
+
+  uploadInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = gridSize;
+      canvas.height = gridSize;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, gridSize, gridSize);
+      const pixels = grid.querySelectorAll('.pixel');
+      const imageData = ctx.getImageData(0, 0, gridSize, gridSize).data;
+      pixels.forEach((p, index) => {
+        const x = index % gridSize;
+        const y = Math.floor(index / gridSize);
+        const i = (y * gridSize + x) * 4;
+        const r = imageData[i];
+        const g = imageData[i + 1];
+        const b = imageData[i + 2];
+        const a = imageData[i + 3] / 255;
+        p.style.background = `rgba(${r},${g},${b},${a})`;
+      });
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  downloadBtn.addEventListener('click', ()=>{
+    const canvas = document.createElement('canvas');
+    const pixelSize = 20;
+    canvas.width = gridSize * pixelSize;
+    canvas.height = gridSize * pixelSize;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    const pixels = grid.querySelectorAll('.pixel');
+    pixels.forEach(p=>{
+      const x = parseInt(p.dataset.x)-1;
+      const y = parseInt(p.dataset.y)-1;
+      ctx.fillStyle = getComputedStyle(p).backgroundColor;
+      ctx.fillRect(x*pixelSize, y*pixelSize, pixelSize, pixelSize);
+    });
+
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `pixel_art_${gridSize}x${gridSize}.png`;
+    a.click();
+  });
+});
+</script>
+</body>
+</html>
